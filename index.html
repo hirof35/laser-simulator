@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Power Laser Weapon Simulator</title>
+    <!-- Tailwind CSS for Modern SF Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Modern UI Feel -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        body {
+            background-color: #030712;
+            font-family: 'Rajdhani', sans-serif;
+            letter-spacing: 0.05em;
+        }
+        .hud-font {
+            font-family: 'Share Tech Mono', monospace;
+        }
+        .title-font {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* Custom Neon Glows */
+        .neon-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+            border: 1px solid rgba(6, 182, 212, 0.4);
+        }
+        .neon-text-red {
+            text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+        }
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8);
+        }
+        /* Styling sliders for cyber theme */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: #1f2937;
+            height: 6px;
+            border-radius: 3px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #06b6d4;
+            cursor: pointer;
+            box-shadow: 0 0 8px #06b6d4;
+            transition: transform 0.1s ease;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex items-center justify-center p-4">
+
+    <!-- Main Container -->
+    <div class="w-full max-w-7xl bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl overflow-hidden flex flex-col lg:flex-row neon-border-cyan">
+        
+        <!-- CONTROL PANEL (LEFT) -->
+        <div class="w-full lg:w-1/3 p-6 border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-900/60 flex flex-col justify-between">
+            <div>
+                <!-- Header -->
+                <div class="mb-6">
+                    <div class="flex items-center gap-2 text-cyan-400 mb-1">
+                        <i class="fa-solid fa-radiation animate-spin-slow"></i>
+                        <span class="text-xs uppercase tracking-widest font-bold">Tactical Telemetry & Simulation</span>
+                    </div>
+                    <h1 class="text-3xl font-black text-white title-font tracking-wide">DEW SIMULATOR</h1>
+                    <p class="text-xs text-slate-400 font-medium">指向性エネルギー兵器 (Directed Energy Weapon) 物理計算システム</p>
+                </div>
+
+                <!-- Parameters Form -->
+                <div class="space-y-5">
+                    <!-- Material Select -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-400 mb-1.5 uppercase">対象装甲素材 (Target Material)</label>
+                        <select id="material-select" class="w-full bg-slate-950 border border-slate-800 rounded-lg py-2 px-3 text-cyan-400 font-bold focus:outline-none focus:border-cyan-500 hud-font text-sm">
+                            <!-- Value matches core physics coefficients [SpecificHeat, Conductivity, MeltingPoint, Density] -->
+                            <option value="steel">高炭素鋼 (Carbon Steel)</option>
+                            <option value="aluminum">アルミニウム合金 (Al 6061)</option>
+                            <option value="titanium">チタン合金 (Ti-6Al-4V)</option>
+                            <option value="quartz">石英ガラス (Quartz)</option>
+                        </select>
+                    </div>
+
+                    <!-- Laser Power -->
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-400 uppercase">レーザー出力 (Laser Power)</span>
+                            <span class="text-cyan-400 hud-font text-sm" id="power-val">5,000 W</span>
+                        </div>
+                        <input type="range" id="power-slider" min="1000" max="20000" step="500" value="5000" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>1 kW</span>
+                            <span>20 kW</span>
+                        </div>
+                    </div>
+
+                    <!-- Focal Position -->
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-400 uppercase">ビーム焦点距離 (Focus Distance)</span>
+                            <span class="text-cyan-400 hud-font text-sm" id="focus-val">500 m</span>
+                        </div>
+                        <input type="range" id="focus-slider" min="100" max="2000" step="50" value="500" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>100 m</span>
+                            <span>2,000 m (ターゲット位置: 500m)</span>
+                        </div>
+                    </div>
+
+                    <!-- Armor Thickness -->
+                    <div>
+                        <div class="flex justify-between text-xs font-bold mb-1">
+                            <span class="text-slate-400 uppercase">装甲厚み (Armor Thickness)</span>
+                            <span class="text-cyan-400 hud-font text-sm" id="thickness-val">10 mm</span>
+                        </div>
+                        <input type="range" id="thickness-slider" min="1" max="50" step="1" value="10" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-1">
+                            <span>1 mm</span>
+                            <span>50 mm</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Controls -->
+            <div class="mt-8 pt-6 border-t border-slate-800 space-y-3">
+                <button id="btn-fire" class="w-full bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-red-900/30 title-font">
+                    <i class="fa-solid fa-circle-radiation"></i>
+                    <span>EMIT LASER (照射開始)</span>
+                </button>
+                
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-reset" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-300 font-bold py-2.5 px-3 rounded-xl transition duration-150 text-sm flex items-center justify-center gap-1.5 border border-slate-700">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>システムリセット</span>
+                    </button>
+                    <button id="btn-stop" class="bg-slate-950 hover:bg-slate-900 active:bg-black text-red-500 font-bold py-2.5 px-3 rounded-xl transition duration-150 text-sm flex items-center justify-center gap-1.5 border border-red-900/40">
+                        <i class="fa-solid fa-ban"></i>
+                        <span>照射強制停止</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIMULATION CANVAS & REAL-TIME TELEMETRY (RIGHT) -->
+        <div class="w-full lg:w-2/3 p-6 flex flex-col justify-between bg-slate-950 relative">
+            
+            <!-- Real-Time Stats HUD -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
+                    <span class="block text-[10px] text-slate-500 uppercase font-bold">ターゲット温度 (Target Temp)</span>
+                    <span class="text-2xl font-bold tracking-tight hud-font text-amber-500" id="hud-temp">25.0 °C</span>
+                </div>
+                <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
+                    <span class="block text-[10px] text-slate-500 uppercase font-bold font-semibold">照射時間 (Emission Time)</span>
+                    <span class="text-2xl font-bold tracking-tight hud-font text-cyan-400" id="hud-time">0.00 s</span>
+                </div>
+                <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
+                    <span class="block text-[10px] text-slate-500 uppercase font-bold font-semibold">スポット径 / エネルギー密度</span>
+                    <span class="text-md font-bold tracking-tight hud-font text-indigo-400 block mt-1 leading-tight" id="hud-spot">0.24 mm</span>
+                    <span class="text-[10px] text-slate-400 hud-font block leading-none" id="hud-intensity">11.1 kW/cm²</span>
+                </div>
+                <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800/80">
+                    <span class="block text-[10px] text-slate-500 uppercase font-bold font-semibold">貫通ステータス</span>
+                    <span class="text-lg font-bold tracking-tight hud-font text-emerald-400 block leading-tight mt-1" id="hud-status">待機中 (READY)</span>
+                </div>
+            </div>
+
+            <!-- Primary 2D Simulation Canvas -->
+            <div class="relative w-full aspect-[16/9] bg-slate-900 rounded-xl border border-slate-800 overflow-hidden mb-4">
+                <canvas id="sim-canvas" class="w-full h-full block"></canvas>
+                <!-- HUD Grid Overlay to enhance SF look -->
+                <div class="absolute inset-0 pointer-events-none border border-cyan-500/10 bg-[linear-gradient(rgba(18,24,38,0)_95%,rgba(6,182,212,0.05)_95%),linear-gradient(90deg,rgba(18,24,38,0)_95%,rgba(6,182,212,0.05)_95%)] bg-[size:40px_40px]"></div>
+                <!-- Scanning line effect -->
+                <div class="absolute top-0 left-0 w-full h-0.5 bg-cyan-500/20 shadow-[0_0_10px_#06b6d4] animate-pulse"></div>
+            </div>
+
+            <!-- Temperature Trend Realtime Graph (Custom Canvas) -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <!-- Physics formula showcase box -->
+                <div class="md:col-span-1 bg-slate-900/50 p-3.5 rounded-xl border border-slate-800/80 flex flex-col justify-between text-xs">
+                    <div>
+                        <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">熱平衡基礎方程式</span>
+                        <div class="hud-font text-cyan-500 text-[11px] bg-slate-950 p-2 rounded border border-slate-800/50">
+                            dQ = (P * η * dt) - [h * A * (T - T_inf) + ε * σ * A * (T^4 - T_inf^4)] * dt
+                        </div>
+                    </div>
+                    <p class="text-slate-400 mt-1 leading-relaxed text-[11px]">照射光が物質に吸収され比熱に応じて加熱される一方、対流・熱伝導・放射（ステファン・ボルツマン則）による放熱ロスが生じます。</p>
+                </div>
+                
+                <!-- Real-time Plotting Canvas -->
+                <div class="md:col-span-2 bg-slate-900/50 p-3.5 rounded-xl border border-slate-800/80 relative flex flex-col">
+                    <span class="block text-[10px] text-slate-500 uppercase font-bold mb-1">温度上昇トレンドグラフ (Time-Temperature Graph)</span>
+                    <div class="flex-grow relative h-28 bg-slate-950 rounded border border-slate-800/50 overflow-hidden">
+                        <canvas id="graph-canvas" class="w-full h-full block"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- MAIN ENGINE CODE (TYPESCRIPT CONVERTED TO MODERN ES6 JS) -->
+    <script>
+        // 1. Material Physics Database
+        const MaterialDatabase = {
+            steel: {
+                name: '高炭素鋼 (Carbon Steel)',
+                specificHeat: 460,      // J/(kg·K)
+                conductivity: 43,       // W/(m·K)
+                meltingPoint: 1500,     // °C
+                density: 7850,          // kg/m³
+                absorption: 0.65,       // Laser absorption coefficient (0~1)
+                color: '#64748b'        // Base Render Color
+            },
+            aluminum: {
+                name: 'アルミニウム合金 (Al 6061)',
+                specificHeat: 900,
+                conductivity: 167,
+                meltingPoint: 660,
+                density: 2700,
+                absorption: 0.35,       // Shiny, highly reflective
+                color: '#94a3b8'
+            },
+            titanium: {
+                name: 'チタン合金 (Ti-6Al-4V)',
+                specificHeat: 520,
+                conductivity: 6.7,      // Very low thermal conductivity -> High local heating
+                meltingPoint: 1660,
+                density: 4430,
+                absorption: 0.55,
+                color: '#475569'
+            },
+            quartz: {
+                name: '石英ガラス (Quartz)',
+                specificHeat: 750,
+                conductivity: 1.4,
+                meltingPoint: 1713,
+                density: 2200,
+                absorption: 0.85,       // Heat accumulates extremely fast locally
+                color: '#e2e8f0'
+            }
+        };
+
+        // 2. Global Simulator State
+        const State = {
+            // Laser inputs
+            power: 5000,           // Watts
+            focusDistance: 500,    // Meters
+            targetDistance: 500,   // Fixed Target Location (Meters)
+            laserWavelength: 1.06e-6, // 1.06 micrometer fiber laser
+            initialBeamRadius: 0.02, // 20mm initial collimated beam radius
+            
+            // Target inputs
+            thickness: 10,         // Millimeters
+            materialKey: 'steel',
+            
+            // Live status
+            isFiring: false,
+            elapsedTime: 0,        // seconds
+            temperature: 25.0,      // °C (starts at room temp)
+            penetrationDepth: 0,   // mm
+            isPenetrated: false,
+            
+            // Telemetry logging
+            tempHistory: []        // Array of {time, temp} for graphing
+        };
+
+        // UI Element References
+        const materialSelect = document.getElementById('material-select');
+        const powerSlider = document.getElementById('power-slider');
+        const powerVal = document.getElementById('power-val');
+        const focusSlider = document.getElementById('focus-slider');
+        const focusVal = document.getElementById('focus-val');
+        const thicknessSlider = document.getElementById('thickness-slider');
+        const thicknessVal = document.getElementById('thickness-val');
+        
+        const btnFire = document.getElementById('btn-fire');
+        const btnReset = document.getElementById('btn-reset');
+        const btnStop = document.getElementById('btn-stop');
+
+        const hudTemp = document.getElementById('hud-temp');
+        const hudTime = document.getElementById('hud-time');
+        const hudSpot = document.getElementById('hud-spot');
+        const hudIntensity = document.getElementById('hud-intensity');
+        const hudStatus = document.getElementById('hud-status');
+
+        const simCanvas = document.getElementById('sim-canvas');
+        const simCtx = simCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graph-canvas');
+        const graphCtx = graphCanvas.getContext('2d');
+
+        // Dynamic Sizing of Canvases
+        function resizeCanvases() {
+            simCanvas.width = simCanvas.clientWidth;
+            simCanvas.height = simCanvas.clientHeight;
+            graphCanvas.width = graphCanvas.clientWidth;
+            graphCanvas.height = graphCanvas.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvases);
+        // Initial manual trigger
+        setTimeout(resizeCanvases, 100);
+
+        // Update Slider Label Displays & State
+        function updateInputsFromUI() {
+            State.power = parseInt(powerSlider.value);
+            powerVal.textContent = State.power.toLocaleString() + " W";
+
+            State.focusDistance = parseInt(focusSlider.value);
+            focusVal.textContent = State.focusDistance + " m";
+
+            State.thickness = parseInt(thicknessSlider.value);
+            thicknessVal.textContent = State.thickness + " mm";
+
+            State.materialKey = materialSelect.value;
+        }
+
+        [powerSlider, focusSlider, thicknessSlider, materialSelect].forEach(el => {
+            el.addEventListener('input', () => {
+                updateInputsFromUI();
+                calculateOpticalConstants();
+            });
+        });
+
+        // 3. Mathematical Physics Calculations
+        let beamSpotRadiusAtTarget = 0.001; // meters
+        let energyIntensity = 0; // W/cm²
+
+        function calculateOpticalConstants() {
+            // Gaussian Beam Diffraction Calculation
+            // w(z) = w0 * sqrt(1 + (lambda * (z - z_f) / (pi * w0^2))^2)
+            const lambda = State.laserWavelength;
+            const w0 = State.initialBeamRadius;
+            const z = State.targetDistance;
+            const zf = State.focusDistance;
+            
+            const diffractionLengthFactor = (lambda * (z - zf)) / (Math.PI * w0 * w0);
+            beamSpotRadiusAtTarget = w0 * Math.sqrt(1 + Math.pow(diffractionLengthFactor, 2));
+            
+            // Limit minimum spot radius based on diffraction-limited beam waist (Air fluctuation and optics)
+            if (beamSpotRadiusAtTarget < 0.0001) beamSpotRadiusAtTarget = 0.0001; 
+
+            const spotAreaCm2 = Math.PI * Math.pow(beamSpotRadiusAtTarget * 100, 2); // cm²
+            const mat = MaterialDatabase[State.materialKey];
+            const netPower = State.power * mat.absorption;
+            energyIntensity = netPower / spotAreaCm2; // W/cm²
+
+            // HUD Telemetry Updates
+            hudSpot.textContent = (beamSpotRadiusAtTarget * 2000).toFixed(2) + " mm";
+            hudIntensity.textContent = (energyIntensity / 1000).toFixed(1) + " kW/cm²";
+        }
+
+        // Initialize Constants
+        updateInputsFromUI();
+        calculateOpticalConstants();
+
+        // 4. MAIN SIMULATION PHYSICS ENGINE LOOP
+        let lastTime = performance.now();
+        const ROOM_TEMP = 25.0;
+
+        function runPhysicsStep(dt) {
+            if (!State.isFiring) return;
+
+            const mat = MaterialDatabase[State.materialKey];
+            
+            // Heat balance: dQ = Qin - Qout
+            // Spot Radius in meters
+            const spotArea = Math.PI * Math.pow(beamSpotRadiusAtTarget, 2); 
+            
+            // Mass estimation of active thermal interaction cylinder
+            // Assumed volume: Spot Area * Thermal Penetration Depth
+            // Thermal depth is simplified based on material conductivity
+            const activeDepth = Math.max(0.001, Math.sqrt(mat.conductivity * dt)); // Thermal diffusion depth approx
+            const interactionVolume = spotArea * activeDepth; 
+            const activeMass = interactionVolume * mat.density;
+
+            // Power absorbed
+            const qIn = State.power * mat.absorption * dt;
+
+            // Heat dissipation loss (Convective and Radiative simplification)
+            const heatTransferCoef = 25; // h: convective cooling W/(m²K)
+            const stefanBoltzmann = 5.67e-8;
+            const emissivity = 0.8;
+            const currentTempKelvin = State.temperature + 273.15;
+            const ambientTempKelvin = ROOM_TEMP + 273.15;
+
+            const qConvection = heatTransferCoef * spotArea * (State.temperature - ROOM_TEMP) * dt;
+            const qRadiation = emissivity * stefanBoltzmann * spotArea * (Math.pow(currentTempKelvin, 4) - Math.pow(ambientTempKelvin, 4)) * dt;
+            
+            const qOut = qConvection + qRadiation;
+            const netHeat = qIn - qOut;
+
+            // Compute Temperature Delta
+            // dT = dQ / (m * Cp)
+            let dT = netHeat / (activeMass * mat.specificHeat);
+            
+            // Cap maximum rate of temp increase for mathematical stability
+            if (dT > 1500) dT = 1500; 
+
+            if (!State.isPenetrated) {
+                State.temperature += dT;
+            }
+
+            // Temperature threshold checking
+            if (State.temperature >= mat.meltingPoint) {
+                State.temperature = mat.meltingPoint; // Clamp to Melting Point during phase change
+                
+                // Melt speed calculation (Simplified Ablation Model)
+                // Penetration Rate is proportional to energy intensity and inversely proportional to density & melting point
+                const meltEfficiency = 0.00015; // Calibration factor
+                const ablationRate = (energyIntensity * meltEfficiency) / (mat.density * mat.specificHeat * 1e-6); 
+                
+                State.penetrationDepth += ablationRate * dt;
+                
+                if (State.penetrationDepth >= State.thickness) {
+                    State.penetrationDepth = State.thickness;
+                    State.isPenetrated = true;
+                }
+            }
+
+            State.elapsedTime += dt;
+
+            // Log telemetry for trend line plotting (approx every 16ms / 60fps)
+            if (State.tempHistory.length === 0 || State.elapsedTime - State.tempHistory[State.tempHistory.length - 1].time > 0.05) {
+                State.tempHistory.push({
+                    time: State.elapsedTime,
+                    temp: State.temperature
+                });
+                // Cap history length to avoid memory bloat
+                if (State.tempHistory.length > 200) State.tempHistory.shift();
+            }
+        }
+
+        // 5. RENDERING VISUALS (SIMULATION & HUD OVERLAYS)
+        let particleSystem = [];
+
+        function spawnMeltSparks(x, y, intensity) {
+            // Spawns orange/yellow sparks on contact point
+            const count = Math.min(5, Math.ceil(intensity / 100));
+            for (let i = 0; i < count; i++) {
+                particleSystem.push({
+                    x: x,
+                    y: y,
+                    vx: -3 - Math.random() * 8, // Spark backward
+                    vy: (Math.random() - 0.5) * 6,
+                    life: 0.5 + Math.random() * 0.5,
+                    maxLife: 1.0,
+                    size: 2 + Math.random() * 3,
+                    color: `hsl(${15 + Math.random() * 30}, 100%, ${50 + Math.random() * 50}%)`
+                });
+            }
+        }
+
+        function updateAndDrawParticles(ctx) {
+            for (let i = particleSystem.length - 1; i >= 0; i--) {
+                const p = particleSystem[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.1; // gravity effect
+                p.life -= 0.016; // decay
+
+                if (p.life <= 0) {
+                    particleSystem.splice(i, 1);
+                    continue;
+                }
+
+                // Render particle with alpha decay
+                ctx.save();
+                ctx.globalAlpha = p.life / p.maxLife;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function drawSimulation() {
+            const width = simCanvas.width;
+            const height = simCanvas.height;
+            simCtx.clearRect(0, 0, width, height);
+
+            // Left: Emitter (Laser Canon Module)
+            const emitterX = 80;
+            const emitterY = height / 2;
+            
+            // Right: Target Plate Position
+            const targetX = width - 120;
+            const targetWidth = 40;
+            const targetHeight = height - 160;
+            const targetY = height / 2 - targetHeight / 2;
+
+            // --- 1. RENDER EMITTER POD ---
+            simCtx.save();
+            simCtx.fillStyle = '#1e293b';
+            simCtx.strokeStyle = '#38bdf8';
+            simCtx.lineWidth = 2;
+            
+            // Rotating base turret animation
+            const pulseGlow = (Math.sin(State.elapsedTime * 8) + 1) / 2;
+            simCtx.beginPath();
+            simCtx.arc(emitterX - 30, emitterY, 50, -Math.PI/2, Math.PI/2);
+            simCtx.fill();
+            simCtx.stroke();
+
+            // Barrel emitter nozzle
+            simCtx.fillStyle = '#0f172a';
+            simCtx.fillRect(emitterX - 10, emitterY - 20, 40, 40);
+            simCtx.strokeRect(emitterX - 10, emitterY - 20, 40, 40);
+            
+            // Cyan status led on emitter
+            simCtx.fillStyle = State.isFiring ? `rgba(239, 68, 68, ${0.4 + pulseGlow * 0.6})` : '#06b6d4';
+            simCtx.shadowColor = State.isFiring ? '#ef4444' : '#06b6d4';
+            simCtx.shadowBlur = 10;
+            simCtx.beginPath();
+            simCtx.arc(emitterX - 15, emitterY - 30, 6, 0, Math.PI * 2);
+            simCtx.fill();
+            simCtx.restore();
+
+            // --- 2. RENDER THE TARGET ARMOR PLATE ---
+            const mat = MaterialDatabase[State.materialKey];
+            simCtx.save();
+            
+            // Base plate shadow / back wall
+            simCtx.fillStyle = '#090d16';
+            simCtx.fillRect(targetX, targetY, targetWidth, targetHeight);
+
+            // Main plate draw
+            simCtx.fillStyle = mat.color;
+            simCtx.strokeStyle = '#1e293b';
+            simCtx.lineWidth = 1;
+            simCtx.fillRect(targetX, targetY, targetWidth, targetHeight);
+            simCtx.strokeRect(targetX, targetY, targetWidth, targetHeight);
+
+            // Thermal Heat Glow Map (Rendering localized heating)
+            if (State.temperature > ROOM_TEMP) {
+                const ratio = (State.temperature - ROOM_TEMP) / (mat.meltingPoint - ROOM_TEMP);
+                const heatRadius = Math.max(15, beamSpotRadiusAtTarget * 1000 * 1.5);
+                
+                // Thermal Color Profile Gradient
+                // HSL Gradient going from Dark Red (0) to Yellow (60) to White (100)
+                const hue = Math.max(0, 60 * (1 - ratio));
+                const lightness = 30 + ratio * 70;
+                
+                const grad = simCtx.createRadialGradient(
+                    targetX, emitterY, 0,
+                    targetX, emitterY, heatRadius
+                );
+                grad.addColorStop(0, `hsla(${hue}, 100%, ${lightness}%, 0.95)`);
+                grad.addColorStop(0.3, `hsla(${hue}, 100%, 40%, 0.7)`);
+                grad.addColorStop(0.7, `rgba(220, 38, 38, 0.3)`);
+                grad.addColorStop(1, `rgba(0, 0, 0, 0)`);
+
+                simCtx.fillStyle = grad;
+                simCtx.beginPath();
+                simCtx.arc(targetX, emitterY, heatRadius, 0, Math.PI * 2);
+                simCtx.fill();
+            }
+
+            // Render Penetration (Boring physical hole)
+            if (State.penetrationDepth > 0) {
+                const holeDepthRatio = State.penetrationDepth / State.thickness;
+                const holeWidthPixel = targetWidth * holeDepthRatio;
+                const holeHeight = Math.max(6, beamSpotRadiusAtTarget * 2000 * 0.8);
+
+                simCtx.fillStyle = '#030712'; // Hollow cavity color
+                simCtx.fillRect(targetX - 2, emitterY - holeHeight / 2, holeWidthPixel + 2, holeHeight);
+                
+                // Melt borders (molten slag glow)
+                simCtx.strokeStyle = '#f97316';
+                simCtx.lineWidth = 2;
+                simCtx.beginPath();
+                simCtx.moveTo(targetX, emitterY - holeHeight / 2);
+                simCtx.lineTo(targetX + holeWidthPixel, emitterY - holeHeight / 2);
+                simCtx.lineTo(targetX + holeWidthPixel, emitterY + holeHeight / 2);
+                simCtx.lineTo(targetX, emitterY + holeHeight / 2);
+                simCtx.stroke();
+            }
+            simCtx.restore();
+
+            // --- 3. RENDER LASER BEAM (COHERENT LIGHT PROPAGATION) ---
+            if (State.isFiring) {
+                simCtx.save();
+                
+                // Beam path definition
+                const beamContactX = targetX + (State.penetrationDepth / State.thickness) * targetWidth;
+                
+                // Laser style setup based on calculated waist diameter
+                const baseWidth = beamSpotRadiusAtTarget * 2000; // scale for visualization
+                
+                // Diffraction visual indicator (Focus point representation)
+                const focusX = emitterX + (State.focusDistance / State.targetDistance) * (targetX - emitterX);
+
+                // Laser Beam Gradient Fill (Multipass Glow Effect)
+                const laserGrad = simCtx.createLinearGradient(emitterX, 0, beamContactX, 0);
+                laserGrad.addColorStop(0, 'rgba(239, 68, 68, 0.85)');
+                laserGrad.addColorStop(0.5, 'rgba(244, 63, 94, 0.95)');
+                laserGrad.addColorStop(1, 'rgba(254, 240, 138, 0.98)');
+
+                // Draw outer scatter glow first
+                simCtx.beginPath();
+                simCtx.moveTo(emitterX, emitterY - baseWidth * 1.5);
+                simCtx.lineTo(focusX, emitterY - 2);
+                simCtx.lineTo(beamContactX, emitterY - baseWidth * 1.5);
+                simCtx.lineTo(beamContactX, emitterY + baseWidth * 1.5);
+                simCtx.lineTo(focusX, emitterY + 2);
+                simCtx.lineTo(emitterX, emitterY + baseWidth * 1.5);
+                simCtx.closePath();
+
+                simCtx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+                simCtx.shadowColor = '#ef4444';
+                simCtx.shadowBlur = 20;
+                simCtx.fill();
+
+                // Draw Core Hot Beam line
+                simCtx.beginPath();
+                simCtx.moveTo(emitterX, emitterY - baseWidth * 0.4);
+                simCtx.lineTo(focusX, emitterY - 1);
+                simCtx.lineTo(beamContactX, emitterY - baseWidth * 0.4);
+                simCtx.lineTo(beamContactX, emitterY + baseWidth * 0.4);
+                simCtx.lineTo(focusX, emitterY + 1);
+                simCtx.lineTo(emitterX, emitterY + baseWidth * 0.4);
+                simCtx.closePath();
+
+                simCtx.fillStyle = laserGrad;
+                simCtx.shadowBlur = 8;
+                simCtx.fill();
+
+                // Draw central ultra-hot plasma beam core
+                simCtx.beginPath();
+                simCtx.moveTo(emitterX, emitterY - 1.5);
+                simCtx.lineTo(beamContactX, emitterY - 1.5);
+                simCtx.lineTo(beamContactX, emitterY + 1.5);
+                simCtx.lineTo(emitterX, emitterY + 1.5);
+                simCtx.closePath();
+                simCtx.fillStyle = '#ffffff';
+                simCtx.shadowBlur = 0;
+                simCtx.fill();
+
+                simCtx.restore();
+
+                // Spawn dynamic particle sparks on contact
+                spawnMeltSparks(beamContactX, emitterY, energyIntensity);
+            }
+
+            // Draw interactive spark particles
+            updateAndDrawParticles(simCtx);
+        }
+
+        // 6. RENDER TREND LINE GRAPHS
+        function drawTrendGraph() {
+            const width = graphCanvas.width;
+            const height = graphCanvas.height;
+            graphCtx.clearRect(0, 0, width, height);
+
+            const mat = MaterialDatabase[State.materialKey];
+
+            // Graph configurations
+            const paddingX = 40;
+            const paddingY = 20;
+            const graphWidth = width - paddingX * 2;
+            const graphHeight = height - paddingY * 2;
+
+            // Draw background grid lines
+            graphCtx.strokeStyle = '#1e293b';
+            graphCtx.lineWidth = 1;
+            
+            // X-Axis (Time) & Y-Axis (Temp) Lines
+            graphCtx.strokeRect(paddingX, paddingY, graphWidth, graphHeight);
+
+            // Target Material Melting Point Marker Line
+            const maxTempRange = Math.max(2000, mat.meltingPoint * 1.15);
+            const meltY = paddingY + graphHeight - (mat.meltingPoint / maxTempRange) * graphHeight;
+
+            graphCtx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+            graphCtx.setLineDash([5, 5]);
+            graphCtx.beginPath();
+            graphCtx.moveTo(paddingX, meltY);
+            graphCtx.lineTo(paddingX + graphWidth, meltY);
+            graphCtx.stroke();
+            graphCtx.setLineDash([]); // clear dash
+
+            // Draw axis labels
+            graphCtx.fillStyle = '#64748b';
+            graphCtx.font = '10px "Share Tech Mono"';
+            graphCtx.fillText(`${mat.meltingPoint}°C (融点)`, paddingX + 5, meltY - 4);
+            graphCtx.fillText('2000°C', paddingX - 35, paddingY + 10);
+            graphCtx.fillText('0°C', paddingX - 25, paddingY + graphHeight);
+
+            // Draw actual Temperature Curve
+            if (State.tempHistory.length > 1) {
+                const maxTime = Math.max(5.0, State.elapsedTime);
+
+                graphCtx.save();
+                graphCtx.strokeStyle = '#06b6d4';
+                graphCtx.lineWidth = 2.5;
+                graphCtx.shadowColor = '#06b6d4';
+                graphCtx.shadowBlur = 5;
+                graphCtx.beginPath();
+
+                for (let i = 0; i < State.tempHistory.length; i++) {
+                    const log = State.tempHistory[i];
+                    
+                    const x = paddingX + (log.time / maxTime) * graphWidth;
+                    const y = paddingY + graphHeight - (log.temp / maxTempRange) * graphHeight;
+
+                    if (i === 0) {
+                        graphCtx.moveTo(x, y);
+                    } else {
+                        graphCtx.lineTo(x, y);
+                    }
+                }
+                graphCtx.stroke();
+                graphCtx.restore();
+            }
+        }
+
+        // Update Textual HUD Values
+        function updateHUD() {
+            hudTemp.textContent = State.temperature.toFixed(1) + " °C";
+            hudTime.textContent = State.elapsedTime.toFixed(2) + " s";
+
+            const mat = MaterialDatabase[State.materialKey];
+            if (State.isPenetrated) {
+                hudStatus.innerHTML = '<span class="text-red-500 animate-pulse">💥 PENETRATED (貫通完了)</span>';
+                hudTemp.classList.replace('text-amber-500', 'text-red-500');
+            } else if (State.temperature >= mat.meltingPoint) {
+                const progress = (State.penetrationDepth / State.thickness) * 100;
+                hudStatus.innerHTML = `<span class="text-orange-500">融解中: ${progress.toFixed(0)}%</span>`;
+                hudTemp.classList.replace('text-amber-500', 'text-orange-400');
+            } else if (State.isFiring) {
+                hudStatus.innerHTML = '<span class="text-cyan-400">加熱中 (HEATING)</span>';
+                hudTemp.className = 'text-2xl font-bold tracking-tight hud-font text-amber-500';
+            } else {
+                hudStatus.innerHTML = '<span class="text-emerald-400">STANDBY (待機中)</span>';
+                hudTemp.className = 'text-2xl font-bold tracking-tight hud-font text-cyan-400';
+            }
+        }
+
+        // 7. MAIN ENGINE ANIMATION LOOP (requestAnimationFrame)
+        function gameLoop() {
+            const now = performance.now();
+            const dt = (now - lastTime) / 1000.0; // seconds
+            lastTime = now;
+
+            // Cap dt to prevent calculation explosion when window loses focus
+            const clampedDt = Math.min(0.05, dt);
+
+            // Run physics engine cycle
+            runPhysicsStep(clampedDt);
+
+            // UI Render routines
+            drawSimulation();
+            drawTrendGraph();
+            updateHUD();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // 8. ACTION INTERFACES / EVENT LISTENERS
+        btnFire.addEventListener('click', () => {
+            if (State.isPenetrated) {
+                // Autoreset if trying to fire when already dead
+                resetSimulation();
+            }
+
+            State.isFiring = !State.isFiring;
+            
+            if (State.isFiring) {
+                btnFire.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>STOP EMISSION (照射停止)</span>';
+                btnFire.className = "w-full bg-orange-600 hover:bg-orange-500 active:bg-orange-700 text-white font-bold py-3 px-4 rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-orange-900/30 title-font";
+            } else {
+                btnFire.innerHTML = '<i class="fa-solid fa-circle-radiation"></i> <span>EMIT LASER (照射開始)</span>';
+                btnFire.className = "w-full bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-red-900/30 title-font";
+            }
+        });
+
+        function stopEmission() {
+            State.isFiring = false;
+            btnFire.innerHTML = '<i class="fa-solid fa-circle-radiation"></i> <span>EMIT LASER (照射開始)</span>';
+            btnFire.className = "w-full bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold py-3 px-4 rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-red-900/30 title-font";
+        }
+
+        function resetSimulation() {
+            stopEmission();
+            State.elapsedTime = 0;
+            State.temperature = ROOM_TEMP;
+            State.penetrationDepth = 0;
+            State.isPenetrated = false;
+            State.tempHistory = [];
+            particleSystem = [];
+            updateHUD();
+        }
+
+        btnStop.addEventListener('click', stopEmission);
+        btnReset.addEventListener('click', resetSimulation);
+
+        // Run engine loop initialization
+        requestAnimationFrame(gameLoop);
+
+    </script>
+</body>
+</html>
